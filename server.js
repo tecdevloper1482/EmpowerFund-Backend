@@ -14,7 +14,7 @@ connectDB();
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:5173', // Frontend URL
+  origin:   process.env.FRONTEND_URL, // Frontend URL
   credentials: true
 }));
 app.use(express.json());

@@ -18,6 +18,8 @@ const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL ||
   .map((origin) => origin.trim().replace(/\/+$/, ''))
   .filter(Boolean);
 
+const isVercelOrigin = (origin) => /^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app$/i.test(origin);
+
 const corsOptions = {
   origin(origin, callback) {
     if (!origin) {
@@ -26,7 +28,7 @@ const corsOptions = {
     }
 
     const normalizedOrigin = origin.replace(/\/+$/, '');
-    if (allowedOrigins.includes(normalizedOrigin)) {
+    if (allowedOrigins.includes(normalizedOrigin) || isVercelOrigin(normalizedOrigin)) {
       callback(null, true);
       return;
     }

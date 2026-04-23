@@ -11,9 +11,19 @@ if (!process.env.JWT_SECRET) {
 
 const app = express();
 
-const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:5173')
-  .split(',')
-  .map((origin) => origin.trim().replace(/\/+$/, ''))
+const normalizeOrigin = (origin = '') => origin.trim().replace(/\/+$/, '');
+
+const configuredOrigins = [process.env.FRONTEND_URLS, process.env.FRONTEND_URL]
+  .filter(Boolean)
+  .flatMap((value) => value.split(','));
+
+const devOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+const allowedOrigins = [
+  ...configuredOrigins,
+  ...(process.env.NODE_ENV === 'production' ? [] : devOrigins),
+]
+  .map(normalizeOrigin)
   .filter(Boolean);
 
 const isVercelOrigin = (origin) => /^https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)*\.vercel\.app$/i.test(origin);
@@ -25,7 +35,7 @@ const corsOptions = {
       return;
     }
 
-    const normalizedOrigin = origin.replace(/\/+$/, '');
+    const normalizedOrigin = normalizeOrigin(origin);
     if (allowedOrigins.includes(normalizedOrigin) || isVercelOrigin(normalizedOrigin)) {
       callback(null, true);
       return;
@@ -39,6 +49,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
+app.get('/', (req, res) => {
+  res.send('Backend API is running successfully');
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

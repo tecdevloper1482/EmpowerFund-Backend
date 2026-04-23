@@ -4,8 +4,7 @@ const connectDB = async () => {
   const uri = process.env.MONGO_URI;
 
   if (!uri) {
-    console.warn('MONGO_URI is not set. Running backend without database connection.');
-    return;
+    throw new Error('MONGO_URI is required. Set it in Backend/.env');
   }
 
   try {

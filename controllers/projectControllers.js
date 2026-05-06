@@ -1,6 +1,21 @@
 const Project = require('../models/Project');
 const Investment = require('../models/Investment');
-const fs = require('fs');
+const cloudinary = require('../config/cloudinary');
+
+const uploadToCloudinary = (file) =>
+	new Promise((resolve, reject) => {
+		const stream = cloudinary.uploader.upload_stream(
+			{
+				folder: process.env.CLOUDINARY_FOLDER || 'empowerfund',
+			},
+			(error, result) => {
+				if (error) return reject(error);
+				resolve(result.secure_url);
+			}
+		);
+
+		stream.end(file.buffer);
+	});
 
 exports.createProject = async (req, res) => {
 	try {
@@ -12,7 +27,13 @@ exports.createProject = async (req, res) => {
 
 		let imageURLs = [];
 		if (req.files && req.files['projectImages'] && req.files['projectImages'].length > 0) {
-			imageURLs = req.files['projectImages'].map(file => `${req.protocol}://${req.get('host')}/uploads/${file.filename}`);
+			try {
+				imageURLs = await Promise.all(
+					req.files['projectImages'].map((file) => uploadToCloudinary(file))
+				);
+			} catch (uploadError) {
+				return res.status(500).json({ message: 'Image upload failed', error: uploadError.message });
+			}
 		} else if (req.body.imageURLs) {
 			try {
 				const parsed = JSON.parse(req.body.imageURLs);
@@ -32,10 +53,6 @@ exports.createProject = async (req, res) => {
 
 		return res.status(201).json(project);
 	} catch (error) {
-		if (req.files && req.files['projectImages']) {
-			req.files['projectImages'].forEach(f => f.path && fs.unlink(f.path, () => {}));
-		}
-
 		return res.status(500).json({ message: 'Failed to create project', error: error.message });
 	}
 };
